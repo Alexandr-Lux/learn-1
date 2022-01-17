@@ -8,7 +8,7 @@
         <Map />
       </div>
     </div>
-    <div class="modal" v-if="show">
+    <div class="modal">
       <Modal />
     </div>
   </div>
@@ -21,11 +21,6 @@ import Modal from './components/Modal.vue'
 
 export default {
   name: 'App',
-  data () {
-    return {
-      show: false
-    }
-  },
   components: {
     Map,
     Bar,

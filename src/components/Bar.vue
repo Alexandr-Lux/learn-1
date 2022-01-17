@@ -1,31 +1,44 @@
 <template>
   <div id="barContainer" class="barComp">
     <h1 class="barComp__title">Станции метро</h1>
-    <ul class="barComp__lines-list">
-      <li class="barComp__line" v-for="line in lines" :key="line.name">
-        <Branch :lineObj="line"/>
-      </li>
-    </ul>
+    <el-tree
+      v-if="stations"
+      :data="stations"
+      :props="defaultProps"
+      accordion
+      @node-click="handleNodeClick">
+    </el-tree>
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex'
-import Branch from './Branch.vue'
 
 export default {
-  components: {
-    Branch
+  data () {
+    return {
+      defaultProps: {
+        children: 'stations',
+        label: 'name'
+      }
+    }
   },
   computed: {
     ...mapState({
-      lines: state => state.stations
+      stations: state => state.stations,
+      modalIsOpened: state => state.modalIsOpened,
+      actionModal: state => state.actionModal
     })
   },
   methods: {
     ...mapActions({
-      displayPopup: 'displayPopup'
-    })
+      createModal: 'createModal'
+    }),
+    handleNodeClick (data, node) {
+      if (node.childNodes.length === 0) {
+        this.createModal(data)
+      }
+    }
   }
 }
 </script>
@@ -42,13 +55,6 @@ export default {
       font-weight: 700;
       font-size: 28px;
       margin-bottom: 15px;
-    }
-    &__line {
-      padding: 10px 5px;
-      border-bottom: 1px solid #ccc;
-      &:last-child {
-        border: none;
-      }
     }
   }
 </style>

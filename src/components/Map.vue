@@ -6,6 +6,7 @@
 
 <script>
 import mapboxgl from 'mapbox-gl'
+import layers from '../helpers/layers'
 import { mapState, mapActions } from 'vuex'
 
 export default {
@@ -13,104 +14,41 @@ export default {
   data () {
     return {
       mapgl: null,
-      popup: null,
       accessToken: 'pk.eyJ1IjoiYWxla3NhbmRybHVrcyIsImEiOiJja3k5cW11OHEwOHozMzJvMDQ3NmNkb3hzIn0.29DVVkWSchzT4Hh210QUBg'
     }
   },
   computed: {
     ...mapState({
-      stations: state => state.stations
+      geoStations: state => state.geoStations
     })
   },
   methods: {
     ...mapActions({
-      fetchStations: 'fetchStations'
-    }),
-    stationsToGeojson (data) {
-      const features = []
-
-      data.forEach(ln => {
-        ln.stations.forEach(st => {
-          features.push({
-            type: 'Feature',
-            properties: {
-              order: st.order,
-              name: st.name,
-              admArea: st.admArea,
-              district: st.district,
-              status: st.status
-            },
-            geometry: {
-              type: 'Point',
-              coordinates: [st.lng, st.lat]
-            }
-          })
-        })
-      })
-
-      return {
-        type: 'FeatureCollection',
-        features: features
-      }
-    }
+      fetchStations: 'fetchStations',
+      createModal: 'createModal'
+    })
   },
   mounted () {
     mapboxgl.accessToken = this.accessToken
 
-    this.mapgl = new mapboxgl.Map({
-      container: 'mapContainer',
-      style: 'mapbox://styles/mapbox/streets-v11',
-      center: [37.58, 55.748],
-      zoom: 11,
-      bearing: 0
-    })
+    this.mapgl = new mapboxgl.Map(layers.map)
 
     this.mapgl.on('load', async () => {
       await this.fetchStations()
 
       this.mapgl.addSource('stations', {
         type: 'geojson',
-        data: this.stationsToGeojson(this.stations)
+        data: this.geoStations
       })
 
-      this.mapgl.addLayer({
-        id: 'metro-stations-icon',
-        type: 'circle',
-        source: 'stations',
-        paint: {
-          'circle-color': '#4264fb',
-          'circle-radius': 5,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff'
-        }
-      })
-
-      this.mapgl.addLayer({
-        id: 'metro-stations-name',
-        type: 'symbol',
-        source: 'stations',
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-offset': [0.5, 0],
-          'text-anchor': 'left'
-        },
-        paint: {
-          'text-color': '#555'
-        }
-      })
+      this.mapgl.addLayer(layers.metroMarkers)
+      this.mapgl.addLayer(layers.metroTitles)
 
       this.mapgl.on('click', 'metro-stations-icon', (e) => {
         this.mapgl.flyTo({
           center: e.features[0].geometry.coordinates
         })
-
-        const coordinates = e.features[0].geometry.coordinates
-        const description = e.features[0].properties.name
-
-        new mapboxgl.Popup()
-          .setLngLat(coordinates)
-          .setHTML(description)
-          .addTo(this.mapgl)
+        this.createModal(e.features[0].properties)
       })
 
       this.mapgl.on('mouseenter', ['metro-stations-icon', 'metro-stations-name'], (e) => {
