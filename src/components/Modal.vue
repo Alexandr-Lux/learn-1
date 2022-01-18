@@ -1,13 +1,12 @@
 <template>
-  <div class="modalComp">
-    <el-button type="text" @click="createModal">click to open the Dialog</el-button>
+  <div class="modalComp" v-if="activeModal">
     <el-dialog
-      :title="actionModal.name"
-      :visible.sync="modalIsOpened"
-      width="30%"
-      :before-close="createModal"
-      v-if="modalIsOpened">
-      <div>Станция {{actionModal.name}} находится на линии {{actionModal.line}} в районе {{actionModal.district}}, {{actionModal.admArea}}. На данный момент станция {{actionModal.status}}</div>
+      :visible="activeModal !== null"
+      width="40%"
+      :before-close="closeModal"
+      >
+        <div slot="title" class="modalComp__title">{{activeModal.name}}</div>
+        <div class="modalComp__text">Станция находится на линии {{activeModal.line}} в районе {{activeModal.district}}, {{activeModal.admArea}}. На данный момент станция {{activeModal.status}}</div>
     </el-dialog>
   </div>
 </template>
@@ -17,20 +16,29 @@ import { mapActions, mapState } from 'vuex'
 export default {
   computed: {
     ...mapState({
-      modalIsOpened: state => state.modalIsOpened,
-      actionModal: state => state.actionModal
+      activeModal: state => state.activeModal
     })
   },
   methods: {
     ...mapActions({
       createModal: 'createModal'
-    })
+    }),
+    closeModal () {
+      this.createModal(null)
+    }
   }
 }
 </script>
 
 <style lang="scss" scoped>
   .modalComp {
-    padding: 20px;
+    &__text {
+      text-align: center;
+      font-size: 20px;
+    }
+    &__title {
+      font-size: 30px;
+      text-align: center;
+    }
   }
 </style>

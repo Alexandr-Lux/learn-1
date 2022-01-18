@@ -1,16 +1,14 @@
 <template>
   <div id="app">
     <div class="map-wrapper">
-      <div class="bar">
+      <div class="map-wrapper__bar">
         <Bar />
       </div>
-      <div class="map">
+      <div class="map-wrapper__map">
         <Map />
       </div>
     </div>
-    <div class="modal">
-      <Modal />
-    </div>
+    <Modal />
   </div>
 </template>
 
@@ -30,6 +28,7 @@ export default {
 </script>
 
 <style lang="scss">
+  @import url('https://fonts.googleapis.com/css2?family=PT+Sans+Narrow&display=swap');
   *{padding: 0;margin: 0;border: 0;}
   *,*:before,*:after{-moz-box-sizing: border-box;-webkit-box-sizing: border-box;box-sizing: border-box;}
   :focus,:active{outline: none;}
@@ -58,15 +57,13 @@ export default {
     display: flex;
     position: relative;
     height: 100vh;
-  }
-
-  .map {
-    height: 100%;
-    width: 100%;
-  }
-
-  .bar {
-    height: 100%;
-    width: 400px;
+    &__map {
+      height: 100%;
+      width: 100%;
+    }
+    &__bar {
+      height: 100%;
+      width: 400px;
+    }
   }
 </style>

@@ -5,45 +5,29 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    geoStations: null,
-    actionModal: null,
-    stations: null,
-    modalIsOpened: false
+    activeModal: null,
+    stations: null
+  },
+  getters: {
+    getStationById: state => id => {
+      return state.stations.find(ln => {
+        return ln.stations.find(st => st.id === id)
+      }).stations.find(st => st.id === id)
+    }
   },
   mutations: {
     SET_STATIONS (state, payload) {
-      const features = []
-
-      payload.forEach(ln => {
-        ln.stations.forEach(st => {
-          features.push({
-            type: 'Feature',
-            properties: {
-              order: st.order,
-              name: st.name,
-              admArea: st.admArea,
-              district: st.district,
-              status: st.status,
-              line: ln.name
-            },
-            geometry: {
-              type: 'Point',
-              coordinates: [st.lng, st.lat]
-            }
-          })
+      state.stations = payload.map(ln => {
+        ln.stations.map(st => {
+          st.id = `${ln.name}-${st.name}`
+          st.line = ln.name
+          return st
         })
+        return ln
       })
-
-      state.geoStations = {
-        type: 'FeatureCollection',
-        features
-      }
-
-      state.stations = payload
     },
-    SET_MODAL_STATUS (state, payload) {
-      state.modalIsOpened = !state.modalIsOpened
-      state.actionModal = payload
+    SET_MODAL (state, payload) {
+      state.activeModal = payload
     }
   },
   actions: {
@@ -58,8 +42,13 @@ export default new Vuex.Store({
         alert(error)
       }
     },
-    createModal ({ commit }, data) {
-      commit('SET_MODAL_STATUS', data)
+    createModal ({ commit, getters }, id) {
+      if (id === null) {
+        commit('SET_MODAL', id)
+      } else {
+        const modalStation = getters.getStationById(id)
+        commit('SET_MODAL', modalStation)
+      }
     }
   }
 })
