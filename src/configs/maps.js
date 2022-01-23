@@ -2,7 +2,7 @@ export default {
   baseMap: {
     container: 'mapContainer',
     style: 'mapbox://styles/mapbox/streets-v11',
-    center: [37.58, 55.748],
-    zoom: 11
+    center: [37.67, 55.717],
+    zoom: 9.65
   }
 }

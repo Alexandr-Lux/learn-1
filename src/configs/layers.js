@@ -1,17 +1,19 @@
 export default {
-  metroMarkers: {
+  markers: {
     id: 'metro-stations-icon',
     type: 'circle',
     source: 'stations',
+    name: 'Маркеры',
     paint: {
       'circle-color': '#4264fb',
-      'circle-radius': 5
+      'circle-radius': 4
     }
   },
-  metroTitles: {
+  titles: {
     id: 'metro-stations-name',
     type: 'symbol',
     source: 'stations',
+    name: 'Названия станций',
     layout: {
       'text-field': ['get', 'name'],
       'text-size': 12,
@@ -20,6 +22,20 @@ export default {
     },
     paint: {
       'text-color': '#555'
+    }
+  },
+  lines: {
+    id: 'metro-lines',
+    type: 'line',
+    source: 'lines',
+    name: 'Линии',
+    layout: {
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-blur': 5,
+      'line-color': '#f00',
+      'line-width': 3
     }
   }
 }

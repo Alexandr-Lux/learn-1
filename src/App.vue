@@ -8,7 +8,7 @@
         <Map />
       </div>
     </div>
-    <Modal />
+    <Modal v-if="activeModalConfig !== null" />
   </div>
 </template>
 
@@ -16,6 +16,7 @@
 import Map from './components/Map.vue'
 import Bar from './components/Bar.vue'
 import Modal from './components/Modal.vue'
+import { mapState } from 'vuex'
 
 export default {
   name: 'App',
@@ -23,6 +24,11 @@ export default {
     Map,
     Bar,
     Modal
+  },
+  computed: {
+    ...mapState({
+      activeModalConfig: state => state.activeModalConfig
+    })
   }
 }
 </script>

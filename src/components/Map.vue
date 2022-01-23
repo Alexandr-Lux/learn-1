@@ -1,7 +1,15 @@
 <template>
-  <div class="wrapper">
-    <button @click="changeStateToWatch">А ну ка</button>
-    <div id="mapContainer" class="mapComp"></div>
+  <div class="mapComp">
+    <div id="mapContainer" class="mapComp__map"></div>
+    <ul class="mapComp__btn-list">
+      <li class="mapComp__btn-item" v-for="(layer, index) in layersOnMap" :key="layer.id">
+        <div class="mapComp__btn-name">{{layer.name}}</div>
+        <el-switch
+          v-model="layersOnMap[index].isActive"
+          @change="toggleLayer(index)">
+        </el-switch>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -9,102 +17,140 @@
 import mapboxgl from 'mapbox-gl'
 import maps from '../configs/maps'
 import layers from '../configs/layers'
-import * as dataFn from '../configs/dataFunctions'
-import { mapState, mapActions } from 'vuex'
+import sources from '../configs/sources'
+import jsonToGeojson from '../helpers/jsonToGeojson'
+import { mapState, mapActions, mapMutations } from 'vuex'
 
 export default {
   name: 'BaseMap',
   data () {
     return {
       mapgl: null,
-      sources: [],
+      sourcesOnMap: [],
+      layersOnMap: [],
       accessToken: 'pk.eyJ1IjoiYWxla3NhbmRybHVrcyIsImEiOiJja3k5cW11OHEwOHozMzJvMDQ3NmNkb3hzIn0.29DVVkWSchzT4Hh210QUBg'
     }
   },
   computed: {
     ...mapState({
-      stations: state => state.stations,
-      activeModal: state => state.activeModal
+      stations: state => state.stations.data,
+      lines: state => state.lines.data,
+      geostations: state => state.stations.geojson,
+      geolines: state => state.lines.geojson,
+      activeModalConfig: state => state.activeModalConfig,
+      searchText: state => state.filterText,
+      searchType: state => state.whatToSearch
     })
   },
   methods: {
-    ...mapActions(['fetchStations', 'createModal', 'changeStateToWatch']),
-    jsonToGeojson (json, getData, type) {
-      const features = getData(json).map(item => {
-        return {
-          type: 'Feature',
-          geometry: {
-            type,
-            coordinates: item.coordinates
-          },
-          properties: item.properties
+    ...mapActions(['fetchDataset', 'createModal']),
+    ...mapMutations(['SET_GEOJSON', 'SET_ACTIVEMODAL']),
+
+    async addLayerToMap (layerConfig, source) {
+      if (source && source.url && this[source.id] === null) {
+        await this.fetchDataset({ url: source.url, id: source.id })
+        this.SET_GEOJSON({ data: jsonToGeojson(this[source.id], source.type, source.id), id: source.id })
+      }
+
+      if (source) {
+        if (!this.sourcesOnMap.some(src => src.id === source.id)) {
+          this.sourcesOnMap.push({ id: source.id, isActive: true })
+          this.mapgl.addSource(source.id, {
+            type: 'geojson',
+            data: this[`geo${source.id}`]
+          })
         }
+        this.layersOnMap.push({ isActive: true, ...layerConfig })
+      }
+
+      this.mapgl.addLayer(layerConfig)
+
+      this.mapgl.on('click', layerConfig.id, (e) => {
+        this.SET_ACTIVEMODAL({ id: e.features[0].properties.id, type: source.id })
       })
 
-      return {
-        type: 'FeatureCollection',
-        features
-      }
-    },
-    async addLayerToMap (dataset, fetchFn, sourceId, type) {
-      await fetchFn()
-      const geoJson = this.jsonToGeojson(this[sourceId], dataFn.stationsFeatures, type)
-      if (!this.sources.includes(sourceId)) {
-        this.sources.push(sourceId)
-        this.mapgl.addSource(sourceId, {
-          type: 'geojson',
-          data: geoJson
-        })
-      }
-      this.mapgl.addLayer(dataset)
-
-      this.mapgl.on('click', dataset.id, (e) => {
-        this.moveCenterTo(e.features[0].geometry.coordinates)
-        this.createModal(e.features[0].properties.id)
-      })
-
-      this.mapgl.on('mouseenter', dataset.id, () => {
+      this.mapgl.on('mouseenter', layerConfig.id, () => {
         this.mapgl.getCanvas().style.cursor = 'pointer'
       })
-      this.mapgl.on('mouseleave', dataset.id, () => {
+
+      this.mapgl.on('mouseleave', layerConfig.id, () => {
         this.mapgl.getCanvas().style.cursor = ''
       })
     },
-    moveCenterTo (center) {
-      this.mapgl.flyTo({
-        center
-      })
+    toggleLayer (index) {
+      const currentLayer = this.layersOnMap[index]
+
+      if (!currentLayer.isActive) {
+        this.mapgl.removeLayer(currentLayer.id)
+      } else {
+        this.addLayerToMap(currentLayer)
+      }
     }
   },
   watch: {
-    activeModal (cur) {
-      if (cur) {
-        this.moveCenterTo([cur.lng, cur.lat])
+    activeModalConfig (curModalInfo) {
+      if (curModalInfo !== null) {
+        if (curModalInfo.type === 'stations') {
+          const curStation = this.stations.find(ln => {
+            return ln.stations.find(st => st.id === curModalInfo.id)
+          }).stations.find(st => st.id === curModalInfo.id)
+          this.mapgl.flyTo({ center: [curStation.lng, curStation.lat], zoom: 13 })
+        } else if (curModalInfo.type === 'lines') {
+          this.mapgl.flyTo({ center: maps.baseMap.center, zoom: maps.baseMap.zoom })
+        }
       }
+    },
+    searchText (cur) {
+      this.mapgl.getSource(this.searchType).setData({
+        type: 'FeatureCollection',
+        features: this[`geo${this.searchType}`].features.filter(feature => {
+          return feature.properties.name.toLowerCase().includes(cur.toLowerCase())
+        })
+      })
     }
   },
   mounted () {
     mapboxgl.accessToken = this.accessToken
     this.mapgl = new mapboxgl.Map(maps.baseMap)
     this.mapgl.on('load', async () => {
-      this.addLayerToMap(layers.metroMarkers, this.fetchStations, 'stations', 'Point')
-      this.addLayerToMap(layers.metroTitles, this.fetchStations, 'stations', 'Symbol')
-
-      // this.mapgl.on('click', 'metro-stations-icon', (e) => {
-      //   this.mapgl.flyTo({
-      //     center: e.features[0].geometry.coordinates
-      //   })
-      //   this.createModal(e.features[0].properties)
-      // })
+      await this.addLayerToMap(layers.markers, sources.stations)
+      await this.addLayerToMap(layers.titles, sources.stations)
+      await this.addLayerToMap(layers.lines, sources.lines)
     })
   }
 }
 
 </script>
 
-<style lang='scss' scoped>
+<style lang='scss'>
   .mapComp {
-    height: 100vh;
-    width: 100%;
+    position: relative;
+    &__map {
+      height: 100vh;
+      width: 100%;
+    }
+    &__btn-list {
+      position: absolute;
+      top: 1%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, .5);
+      padding: 5px;
+      border-radius: 10px;
+      display: flex;
+      width: 300px;
+      justify-content: space-around;
+    }
+    &__btn-item {
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    &__btn-name {
+      color: #fff;
+      margin-bottom: 10px;
+    }
   }
 </style>

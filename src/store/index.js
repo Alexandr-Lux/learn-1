@@ -5,49 +5,64 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    activeModal: null,
-    stations: null
+    activeModalConfig: null,
+    whatToSearch: '',
+    stations: {
+      data: null,
+      geojson: null
+    },
+    lines: {
+      data: null,
+      geojson: null
+    },
+    filterText: ''
   },
   getters: {
-    getStationById: state => id => {
-      return state.stations.find(ln => {
-        return ln.stations.find(st => st.id === id)
-      }).stations.find(st => st.id === id)
+    filterStationsBySearch: state => {
+      return state.stations.data.filter(line => {
+        return line.stations.filter(station => {
+          return station.name.toLowerCase().indexOf(state.filterText.toLowerCase()) !== -1
+        }).length !== 0
+      }).map(line => {
+        return {
+          ...line,
+          stations: line.stations.filter(station => {
+            return station.name.toLowerCase().indexOf(state.filterText.toLowerCase()) !== -1
+          })
+        }
+      })
+    },
+    filterLinesBySearch: state => {
+      return state.lines.data.filter(line => {
+        return line.name.toLowerCase().includes(state.filterText.toLowerCase())
+      })
     }
   },
   mutations: {
-    SET_STATIONS (state, payload) {
-      state.stations = payload.map(ln => {
-        ln.stations.map(st => {
-          st.id = `${ln.name}-${st.name}`
-          st.line = ln.name
-          return st
-        })
-        return ln
-      })
+    SET_SOURCES_DATA (state, payload) {
+      state[payload.id].data = payload.data
     },
-    SET_MODAL (state, payload) {
-      state.activeModal = payload
+    SET_ACTIVEMODAL (state, payload) {
+      state.activeModalConfig = payload
+    },
+    FILTER_STATIONS (state, payload) {
+      state.filterText = payload.value
+      state.whatToSearch = payload.type
+    },
+    SET_GEOJSON (state, payload) {
+      state[payload.id].geojson = payload.data
     }
   },
   actions: {
-    async fetchStations ({ commit }) {
+    async fetchDataset ({ commit }, { url, id }) {
       try {
-        await fetch('./data/metro.json')
+        await fetch(url)
           .then(res => res.json())
           .then(data => {
-            commit('SET_STATIONS', data)
+            commit('SET_SOURCES_DATA', { data, id })
           })
       } catch (error) {
         alert(error)
-      }
-    },
-    createModal ({ commit, getters }, id) {
-      if (id === null) {
-        commit('SET_MODAL', id)
-      } else {
-        const modalStation = getters.getStationById(id)
-        commit('SET_MODAL', modalStation)
       }
     }
   }
