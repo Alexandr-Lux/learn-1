@@ -1,8 +1,10 @@
 <template>
   <div id="barContainer" class="barComp" v-if="stations">
-    <el-tabs v-model="activeTab" @tab-click="openLineId = ''" type="border-card" stretch>
-      <el-tab-pane label="Станции" name="stations"></el-tab-pane>
-      <el-tab-pane label="Линии" name="lines"></el-tab-pane>
+    <el-radio-group v-model="activeTab" @changed="openLineId = ''">
+      <el-radio-button label="stations">Станции</el-radio-button>
+      <el-radio-button label="lines">Линии</el-radio-button>
+    </el-radio-group>
+    <div class="barComp__body">
       <div class="barComp__input">
         <el-input
           class="barComp__input-item"
@@ -28,7 +30,7 @@
           </ul>
         </li>
       </ul>
-    </el-tabs>
+    </div>
   </div>
 </template>
 
@@ -84,9 +86,12 @@ export default {
     padding: 0px;
     min-height: 100%;
     max-height: 100vh;
-    width: 350px;
+    width: 300px;
     background-color: #fff;
     overflow: auto;
+    &__body {
+      padding: 10px 20px;
+    }
     &__title {
       font-weight: 700;
       font-size: 28px;
@@ -103,7 +108,8 @@ export default {
       padding: 7px;
       margin-bottom: 5px;
       &:hover {
-        background-color: #ccc;
+        background-color: #409eff;
+        color: #fff;
       }
       &.borderBottom {
         border-bottom: 2px solid;
@@ -128,14 +134,18 @@ export default {
     }
   }
 
-  .el-tabs {
-    &__item {
-      font-size: 24px !important;
-      height: 50px !important;
-      line-height: 50px !important;
-      &.is-active {
-        color: #000 !important;
-      }
+  .el-radio-group {
+    display: flex !important;
+    font-size: 24px !important;
+    height: 50px !important;
+    line-height: 50px !important;
+  }
+
+  .el-radio-button {
+    flex: 1 !important;
+    &__inner {
+      font-size: 20px !important;
+      display: block !important;
     }
   }
 </style>

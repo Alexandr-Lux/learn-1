@@ -33,9 +33,8 @@ export default {
       'line-cap': 'round'
     },
     paint: {
-      'line-blur': 5,
-      'line-color': '#f00',
-      'line-width': 3
+      'line-blur': 2,
+      'line-width': 4
     }
   }
 }

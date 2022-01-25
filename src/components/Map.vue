@@ -19,6 +19,7 @@ import maps from '../configs/maps'
 import layers from '../configs/layers'
 import sources from '../configs/sources'
 import jsonToGeojson from '../helpers/jsonToGeojson'
+import createPaintPropetyConfig from '../helpers/createPaintPropetyConfig'
 import { mapState, mapActions, mapMutations } from 'vuex'
 
 export default {
@@ -46,27 +47,32 @@ export default {
     ...mapActions(['fetchDataset', 'createModal']),
     ...mapMutations(['SET_GEOJSON', 'SET_ACTIVEMODAL']),
 
-    async addLayerToMap (layerConfig, source) {
-      if (source && source.url && this[source.id] === null) {
-        await this.fetchDataset({ url: source.url, id: source.id })
-        this.SET_GEOJSON({ data: jsonToGeojson(this[source.id], source.type, source.id), id: source.id })
+    async addLayerToMap (layerConfig, sourceConfig) {
+      if (sourceConfig && sourceConfig.url) {
+        await this.fetchDataset({ url: sourceConfig.url, id: sourceConfig.id })
+        this.SET_GEOJSON({ data: jsonToGeojson(this[sourceConfig.id], sourceConfig.type, sourceConfig.id), id: sourceConfig.id })
       }
 
-      if (source) {
-        if (!this.sourcesOnMap.some(src => src.id === source.id)) {
-          this.sourcesOnMap.push({ id: source.id, isActive: true })
-          this.mapgl.addSource(source.id, {
+      if (sourceConfig) {
+        if (!this.sourcesOnMap.some(src => src.id === sourceConfig.id)) {
+          this.sourcesOnMap.push({ id: sourceConfig.id, activeLayerIds: [layerConfig.id] })
+          this.mapgl.addSource(sourceConfig.id, {
             type: 'geojson',
-            data: this[`geo${source.id}`]
+            data: this[`geo${sourceConfig.id}`]
           })
+        } else {
+          this.sourcesOnMap.find(src => src.id === sourceConfig.id).activeLayerIds.push(layerConfig.id)
         }
+      }
+
+      if (!this.layersOnMap.some(lyr => lyr.id === layerConfig.id)) {
         this.layersOnMap.push({ isActive: true, ...layerConfig })
       }
 
       this.mapgl.addLayer(layerConfig)
 
       this.mapgl.on('click', layerConfig.id, (e) => {
-        this.SET_ACTIVEMODAL({ id: e.features[0].properties.id, type: source.id })
+        this.SET_ACTIVEMODAL({ id: e.features[0].properties.id, type: sourceConfig.id })
       })
 
       this.mapgl.on('mouseenter', layerConfig.id, () => {
@@ -79,25 +85,72 @@ export default {
     },
     toggleLayer (index) {
       const currentLayer = this.layersOnMap[index]
+      const currentSource = this.sourcesOnMap.find(src => src.id === currentLayer.source)
 
       if (!currentLayer.isActive) {
         this.mapgl.removeLayer(currentLayer.id)
+
+        currentSource.activeLayerIds.splice(currentSource.activeLayerIds.indexOf(currentLayer.id), 1)
+
+        if (currentSource.activeLayerIds.length === 0) {
+          this.mapgl.removeSource(currentSource.id)
+          this.SET_GEOJSON({ data: null, id: currentSource.id })
+          this.sourcesOnMap.splice(this.sourcesOnMap.indexOf(currentSource), 1)
+        }
       } else {
-        this.addLayerToMap(currentLayer)
+        if (!currentSource) {
+          this.addLayerToMap(currentLayer, sources[currentLayer.source])
+        } else {
+          this.sourcesOnMap.find(src => src.id === currentLayer.source).activeLayerIds.push(currentLayer.id)
+          this.addLayerToMap(currentLayer)
+        }
       }
     }
   },
   watch: {
     activeModalConfig (curModalInfo) {
-      if (curModalInfo !== null) {
+      if (curModalInfo) {
         if (curModalInfo.type === 'stations') {
           const curStation = this.stations.find(ln => {
             return ln.stations.find(st => st.id === curModalInfo.id)
           }).stations.find(st => st.id === curModalInfo.id)
           this.mapgl.flyTo({ center: [curStation.lng, curStation.lat], zoom: 13 })
+          this.mapgl.setPaintProperty('metro-stations-icon', 'circle-radius', [
+            'case',
+            ['==', ['get', 'id'], curModalInfo.id],
+            8,
+            4
+          ])
+          this.mapgl.setLayoutProperty('metro-stations-name', 'text-size', [
+            'case',
+            ['==', ['get', 'id'], curModalInfo.id],
+            20,
+            12
+          ])
         } else if (curModalInfo.type === 'lines') {
-          this.mapgl.flyTo({ center: maps.baseMap.center, zoom: maps.baseMap.zoom })
+          const coordinates = this.geolines.features.find(geol => geol.properties.id === curModalInfo.id).geometry.coordinates
+          const bounds = new mapboxgl.LngLatBounds(
+            coordinates[0],
+            coordinates[0]
+          )
+          for (const coord of coordinates) {
+            bounds.extend(coord)
+          }
+          this.mapgl.fitBounds(bounds, {
+            padding: 20
+          })
+
+          this.mapgl.setPaintProperty('metro-lines', 'line-width', [
+            'case',
+            ['==', ['get', 'id'], curModalInfo.id],
+            10,
+            4
+          ])
         }
+      } else {
+        this.mapgl.setPaintProperty('metro-lines', 'line-width', 4)
+        this.mapgl.setPaintProperty('metro-stations-icon', 'circle-radius', 4)
+        this.mapgl.setLayoutProperty('metro-stations-name', 'text-size', 12)
       }
     },
     searchText (cur) {
@@ -116,6 +169,8 @@ export default {
       await this.addLayerToMap(layers.markers, sources.stations)
       await this.addLayerToMap(layers.titles, sources.stations)
       await this.addLayerToMap(layers.lines, sources.lines)
+      this.mapgl.setPaintProperty('metro-lines', 'line-color', createPaintPropetyConfig(this.geolines))
+      this.layersOnMap.find(lyr => lyr.id === 'metro-lines').paint['line-color'] = createPaintPropetyConfig(this.geolines)
     })
   }
 }
@@ -131,18 +186,18 @@ export default {
     }
     &__btn-list {
       position: absolute;
-      top: 1%;
+      top: 0;
       left: 50%;
       transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, .5);
+      background-color: rgba(0, 15, 30, .4);
       padding: 5px;
-      border-radius: 10px;
       display: flex;
-      width: 300px;
-      justify-content: space-around;
+      width: 100%;
+      justify-content: center;
     }
     &__btn-item {
       margin-bottom: 10px;
+      margin: 0 20px 10px;
       display: flex;
       justify-content: center;
       align-items: center;

@@ -7,6 +7,7 @@ export default new Vuex.Store({
   state: {
     activeModalConfig: null,
     whatToSearch: '',
+    mainLoading: true,
     stations: {
       data: null,
       geojson: null
@@ -41,6 +42,7 @@ export default new Vuex.Store({
   mutations: {
     SET_SOURCES_DATA (state, payload) {
       state[payload.id].data = payload.data
+      state.mainLoading = false
     },
     SET_ACTIVEMODAL (state, payload) {
       state.activeModalConfig = payload

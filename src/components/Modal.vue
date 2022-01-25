@@ -12,7 +12,7 @@
         >
           <div v-if="!loading">
             <div slot="title" class="modalComp__title">{{modal.name}}</div>
-            <div v-if="activeModalConfig.type === 'stations'" class="modalComp__text">Станция находится на линии {{modal.line}} в районе {{modal.district}}, {{modal.admArea}}. На данный момент станция {{modal.status}}</div>
+            <div v-if="activeModalConfig.type === 'stations'" class="modalComp__text">Станция находится в районе {{modal.district}}, {{modal.admArea}}. На данный момент станция {{modal.status}}</div>
             <div v-else class="modalComp__text">Здесь может быть информация о линии</div>
           </div>
       </el-dialog>
@@ -49,7 +49,6 @@ export default {
         this.modal = this.stations.find(ln => {
           return ln.stations.find(st => st.id === this.activeModalConfig.id)
         }).stations.find(st => st.id === this.activeModalConfig.id)
-
         break
       case 'lines':
         this.modal = this.lines.find(ln => ln.id === this.activeModalConfig.id)

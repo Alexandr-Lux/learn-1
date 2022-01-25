@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <div class="map-wrapper">
+    <div class="map-wrapper" v-loading="mainLoading">
       <div class="map-wrapper__bar">
         <Bar />
       </div>
@@ -8,7 +8,7 @@
         <Map />
       </div>
     </div>
-    <Modal v-if="activeModalConfig !== null" />
+    <Modal v-if="!!activeModalConfig" />
   </div>
 </template>
 
@@ -27,7 +27,8 @@ export default {
   },
   computed: {
     ...mapState({
-      activeModalConfig: state => state.activeModalConfig
+      activeModalConfig: state => state.activeModalConfig,
+      mainLoading: state => state.mainLoading
     })
   }
 }
@@ -69,7 +70,7 @@ export default {
     }
     &__bar {
       height: 100%;
-      width: 400px;
+      width: 350px;
     }
   }
 </style>
