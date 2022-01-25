@@ -137,7 +137,7 @@ export default {
             bounds.extend(coord)
           }
           this.mapgl.fitBounds(bounds, {
-            padding: 20
+            padding: 50
           })
 
           this.mapgl.setPaintProperty('metro-lines', 'line-width', [
