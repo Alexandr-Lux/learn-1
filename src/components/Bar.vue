@@ -1,6 +1,6 @@
 <template>
   <div id="barContainer" class="barComp" v-if="stations">
-    <el-radio-group v-model="activeTab" @changed="openLineId = ''">
+    <el-radio-group v-model="activeTab" @change="openLineId = ''">
       <el-radio-button label="stations">Станции</el-radio-button>
       <el-radio-button label="lines">Линии</el-radio-button>
     </el-radio-group>
